@@ -3,6 +3,10 @@ import librosa
 import numpy as np
 import soundfile as sf
 
+# 
+#   specify a short audio file in "metronome_filename" and a song in "filename" to generate a metronome using librosa.beat.beat_track
+#
+
 # TODO: set as argparse arguments
 offset_percent = 0.0
 filename = "media/sued.flac"

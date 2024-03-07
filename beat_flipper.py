@@ -5,14 +5,25 @@ import soundfile as sf
 import numpy as np
 import sys
 
+#
+# specify song to flip beats around as first argument
+# second argument is a float value which specifies an offset on the beat position
+#       use this if detection does not perfectly align with beats
+#       multiplies the value with a proportion of the detected samples per beat
+#
+
 offset_percent = 0.0
 
 if len(sys.argv) > 2:
     offset_percent = float(sys.argv[2])
+else:
+    print("INFO: as a second argument, you can specify a float to offset beat by (multiple of a beat length)")
 
-filename = "Q:\\Music\\Queen\\1981 - Greatest Hits I - Queen\\Queen - 16 - We Will Rock You.mp3"
 if len(sys.argv) > 1:
     filename = sys.argv[1]
+else:
+    print("ERROR: i need a filename of a song as the first argument")
+    exit()
 
 time_series, sample_rate = librosa.load(filename)
 
