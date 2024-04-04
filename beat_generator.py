@@ -36,21 +36,32 @@ def generate_beat_metronome(beat_samples, sample_rate, metronome_sound):
     return output
 
 def main(args):
-    time_series, sample_rate = librosa.load(args.song_file)
+    song_ts, song_sr = librosa.load(args.song_file, sr=None, mono=False)
 
-    tempo, beat_frames = librosa.beat.beat_track(y=time_series, sr=sample_rate)
+    ts, sr = librosa.load(args.song_file, sr=None, mono=True)
+    tempo, beat_frames = librosa.beat.beat_track(y=ts, sr=sr)
 
-    samples_per_beat = (tempo/60) * sample_rate
+    samples_per_beat = (tempo/60) * song_sr
 
-    print(f"estimated tempo: {tempo:.2f} bpm, @ a sample rate of {sample_rate} Hz we have {samples_per_beat:.0f} samples/beat")
+    print(f"estimated tempo: {tempo:.2f} bpm, @ a sample rate of {song_sr} Hz we have {samples_per_beat:.0f} samples/beat")
 
     beat_samples = librosa.frames_to_samples(beat_frames)
 
-    output = generate_beat_metronome(beat_samples, sample_rate, librosa.load(args.beat_file)[0])
+    beat_ts = generate_beat_metronome(beat_samples, song_sr, librosa.load(args.beat_file)[0])
+
+    # alter the beat track to match the length of the song
+    beat_ts.resize((1, song_ts.shape[1]))
+    # if the song is not mono, stack the beat so that it matches the songs channel count
+    beat_ts_stack = np.vstack(song_ts.shape[0]*[beat_ts])
+
+    # transpose the array for soundfile
+    #     librosa --> (channels, samples)
+    #   soundfile --> (samples, channels)
+    output = (beat_ts_stack + song_ts).T
 
     if not os.path.exists(os.path.dirname(args.out_file)):
         os.makedirs(os.path.dirname(args.out_file))
-    sf.write(args.out_file, output, sample_rate)
+    sf.write(args.out_file, output, song_sr)
 
 if __name__ == "__main__":
     args = arguments()
