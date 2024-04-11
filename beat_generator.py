@@ -35,10 +35,9 @@ def generate_beat_metronome(beat_samples, sample_rate, metronome_sound):
 
     return output
 
-def main(args):
-    time_series, sample_rate = librosa.load(args.song_file)
-
-    tempo, beat_frames = librosa.beat.beat_track(y=time_series, sr=sample_rate)
+def create_beat_song_from_samples(time_series, sample_rate):
+    mono_time_series = np.average(time_series.T, axis=1)
+    tempo, beat_frames = librosa.beat.beat_track(y=mono_time_series, sr=sample_rate)
 
     samples_per_beat = (tempo/60) * sample_rate
 
@@ -47,10 +46,21 @@ def main(args):
     beat_samples = librosa.frames_to_samples(beat_frames)
 
     output = generate_beat_metronome(beat_samples, sample_rate, librosa.load(args.beat_file)[0])
+    stereo_beat_output = np.column_stack((output, output))
+
+    max_len = max(len(time_series.T), len(stereo_beat_output))
+    padded = np.repeat(np.array([[0, 0]]), max_len - len(stereo_beat_output), axis=0)
+    return np.concatenate((stereo_beat_output, padded))
+
+def main(args):
+    time_series, sample_rate = librosa.load(args.song_file, sr=None, mono=False)
+    padded_stereo_beat_output = create_beat_song_from_samples(time_series, sample_rate)
+    overlayed_audio = time_series.T + padded_stereo_beat_output
 
     if not os.path.exists(os.path.dirname(args.out_file)):
         os.makedirs(os.path.dirname(args.out_file))
-    sf.write(args.out_file, output, sample_rate)
+
+    sf.write(args.out_file, overlayed_audio, sample_rate)
 
 if __name__ == "__main__":
     args = arguments()
