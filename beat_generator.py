@@ -16,7 +16,7 @@ def arguments():
                         help="name of file to store generated metronome in")
     parser.add_argument("--offset", 
                         default=0.0, type=float, 
-                        help="UNUSED: to define a padding to offset the metronome by (as a percentage of the beat length)")
+                        help="amount to offset the metronome by (as a percentage of the beat length)")
 
     return parser.parse_args()
 
@@ -27,25 +27,30 @@ def generate_beat_metronome(beat_samples, sample_rate, metronome_sound):
     output = np.zeros(clip_length, dtype=np.float32)
 
     # offset for positioning the metronome sound so that the beat occurs at the peak 
-    offset = -metronome_sound.argmax()
+    metronome_sound_peak = -metronome_sound.argmax()
 
     for index in beat_samples:
-        if index+offset > 0:
-            output[index+offset:index+len(metronome_sound)+offset] = metronome_sound
+        if index+metronome_sound_peak > 0:
+            output[index+metronome_sound_peak:index+len(metronome_sound)+metronome_sound_peak] = metronome_sound
 
-    return output
+    return output    
 
 def main(args):
     song_ts, song_sr = librosa.load(args.song_file, sr=None, mono=False)
 
-    ts, sr = librosa.load(args.song_file, sr=None, mono=True)
-    tempo, beat_frames = librosa.beat.beat_track(y=ts, sr=sr)
+    ts, _ = librosa.load(args.song_file, sr=song_sr, mono=True)
+    tempo, beat_frames = librosa.beat.beat_track(y=ts, sr=song_sr)
 
     samples_per_beat = (tempo/60) * song_sr
 
     print(f"estimated tempo: {tempo:.2f} bpm, @ a sample rate of {song_sr} Hz we have {samples_per_beat:.0f} samples/beat")
 
     beat_samples = librosa.frames_to_samples(beat_frames)
+
+    # offset beats by a percentage based upon the detected tempo
+    samples_per_beat = (tempo/60) * song_sr
+    offset = args.offset * samples_per_beat
+    beat_samples += offset
 
     beat_ts = generate_beat_metronome(beat_samples, song_sr, librosa.load(args.beat_file)[0])
 
