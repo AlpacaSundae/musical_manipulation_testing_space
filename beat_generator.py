@@ -50,7 +50,7 @@ def main(args):
     # offset beats by a percentage based upon the detected tempo
     samples_per_beat = (tempo/60) * song_sr
     offset = args.offset * samples_per_beat
-    beat_samples += offset
+    beat_samples += int(offset)
 
     beat_ts = generate_beat_metronome(beat_samples, song_sr, librosa.load(args.beat_file)[0])
 
